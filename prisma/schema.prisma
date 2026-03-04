@@ -1,0 +1,171 @@
+// Prisma Schema for BagiBerkah
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum AgeLevel {
+  CHILD
+  TEEN
+  ADULT
+}
+
+enum Status {
+  SCHOOL
+  COLLEGE
+  WORKING
+  NOT_WORKING
+}
+
+enum Closeness {
+  VERY_CLOSE
+  CLOSE
+  DISTANT
+}
+
+enum DistributionMode {
+  DIGITAL
+  CASH
+}
+
+enum EnvelopeStatus {
+  DRAFT
+  PENDING_PAYMENT
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+enum ClaimStatus {
+  PENDING
+  OPENED
+  CLAIMED
+  VALIDATED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+// Models
+model Envelope {
+  id               String           @id @default(cuid())
+  totalBudget      Int
+  distributionMode DistributionMode
+  status           EnvelopeStatus   @default(DRAFT)
+  
+  // Relations
+  recipients       Recipient[]
+  payment          Payment?
+  
+  // Timestamps
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  expiresAt        DateTime?
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Recipient {
+  id               String      @id @default(cuid())
+  name             String
+  ageLevel         AgeLevel
+  status           Status
+  closeness        Closeness
+  contact          String?
+  greetingContext  String?
+  
+  // AI Allocation
+  allocatedAmount  Int
+  aiReasoning      String?
+  aiGreeting       String?
+  
+  // Relations
+  envelope         Envelope    @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  envelopeId       String
+  claim            Claim?
+  
+  // Timestamps
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  @@index([envelopeId])
+}
+
+model Claim {
+  id               String       @id @default(cuid())
+  token            String       @unique
+  qrToken          String?      @unique
+  status           ClaimStatus  @default(PENDING)
+  
+  // Claim details
+  claimMethod      String?      // 'digital' or 'cash'
+  bankAccount      String?
+  bankName         String?
+  
+  // Relations
+  recipient        Recipient    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId      String       @unique
+  
+  // Timestamps
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  openedAt         DateTime?
+  claimedAt        DateTime?
+  validatedAt      DateTime?
+  expiresAt        DateTime
+  
+  @@index([token])
+  @@index([qrToken])
+  @@index([status])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  paymentId        String        @unique  // From payment gateway
+  amount           Int
+  status           PaymentStatus @default(PENDING)
+  paymentUrl       String?
+  
+  // Payment gateway details
+  gatewayResponse  Json?
+  
+  // Relations
+  envelope         Envelope      @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  envelopeId       String        @unique
+  
+  // Timestamps
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  paidAt           DateTime?
+  expiresAt        DateTime?
+  
+  @@index([paymentId])
+  @@index([status])
+}
+
+model AuditLog {
+  id               String        @id @default(cuid())
+  action           String
+  entityType       String
+  entityId         String
+  details          Json?
+  ipAddress        String?
+  userAgent        String?
+  
+  createdAt        DateTime      @default(now())
+  
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
