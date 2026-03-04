@@ -1,13 +1,19 @@
 import { Router } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { EnvelopeController } from '../controllers/envelope.controller';
 import { validate } from '../middlewares/validator';
 import { createEnvelopeSchema } from '../validators/envelope.validator';
+import { envelopeCreationRateLimiter } from '../middlewares/rateLimiter';
+import { idempotency } from '../middlewares/security';
 
-const router = Router();
+const router: ExpressRouter = Router();
 const controller = new EnvelopeController();
 
-// Create envelope
-router.post('/', validate(createEnvelopeSchema), controller.create);
+// Create envelope (with idempotency and strict rate limit)
+router.post('/', envelopeCreationRateLimiter, idempotency, validate(createEnvelopeSchema), controller.create);
+
+// Validate allocation before creating
+router.post('/validate-allocation', controller.validateAllocation);
 
 // Get envelope by ID
 router.get('/:id', controller.getById);

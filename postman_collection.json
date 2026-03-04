@@ -1,0 +1,299 @@
+{
+  "info": {
+    "name": "BagiBerkah API",
+    "description": "AI-Powered THR Experience API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "Get AI Allocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalBudget\": 500000,\n  \"recipients\": [\n    {\n      \"name\": \"Adik Kecil\",\n      \"ageLevel\": \"CHILD\",\n      \"status\": \"SCHOOL\",\n      \"closeness\": \"VERY_CLOSE\"\n    },\n    {\n      \"name\": \"Sepupu Remaja\",\n      \"ageLevel\": \"TEEN\",\n      \"status\": \"COLLEGE\",\n      \"closeness\": \"CLOSE\"\n    },\n    {\n      \"name\": \"Keponakan Dewasa\",\n      \"ageLevel\": \"ADULT\",\n      \"status\": \"WORKING\",\n      \"closeness\": \"DISTANT\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/allocate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "allocate"]
+            }
+          }
+        },
+        {
+          "name": "Generate Greeting",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientName\": \"Adik Kecil\",\n  \"ageLevel\": \"CHILD\",\n  \"context\": \"Rajin puasa dan mengaji\",\n  \"amount\": 150000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/greeting",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "greeting"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Envelopes",
+      "item": [
+        {
+          "name": "Create Envelope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalBudget\": 500000,\n  \"distributionMode\": \"CASH\",\n  \"recipients\": [\n    {\n      \"name\": \"Adik Kecil\",\n      \"ageLevel\": \"CHILD\",\n      \"status\": \"SCHOOL\",\n      \"closeness\": \"VERY_CLOSE\",\n      \"allocatedAmount\": 150000,\n      \"aiReasoning\": \"Anak-anak yang masih sekolah mendapat porsi lebih\",\n      \"aiGreeting\": \"Selamat Idul Fitri! Semoga makin rajin belajar ya!\"\n    },\n    {\n      \"name\": \"Sepupu Remaja\",\n      \"ageLevel\": \"TEEN\",\n      \"status\": \"COLLEGE\",\n      \"closeness\": \"CLOSE\",\n      \"allocatedAmount\": 200000,\n      \"aiReasoning\": \"Remaja kuliah membutuhkan biaya lebih\",\n      \"aiGreeting\": \"Selamat Idul Fitri! Semoga kuliahnya lancar!\"\n    },\n    {\n      \"name\": \"Keponakan Dewasa\",\n      \"ageLevel\": \"ADULT\",\n      \"status\": \"WORKING\",\n      \"closeness\": \"DISTANT\",\n      \"allocatedAmount\": 150000,\n      \"aiReasoning\": \"Dewasa yang sudah bekerja mendapat porsi standar\",\n      \"aiGreeting\": \"Selamat Idul Fitri. Mohon maaf lahir batin.\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/envelopes",
+              "host": ["{{baseUrl}}"],
+              "path": ["envelopes"]
+            }
+          }
+        },
+        {
+          "name": "Get Envelope",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/envelopes/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["envelopes", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "envelope_id_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Envelope Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/envelopes/:id/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["envelopes", ":id", "status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "envelope_id_here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Claims",
+      "item": [
+        {
+          "name": "Get Claim",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/claims/:token",
+              "host": ["{{baseUrl}}"],
+              "path": ["claims", ":token"],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "claim_token_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Claim (Digital)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimMethod\": \"digital\",\n  \"bankAccount\": \"1234567890\",\n  \"bankName\": \"BCA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/claims/:token",
+              "host": ["{{baseUrl}}"],
+              "path": ["claims", ":token"],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "claim_token_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Claim (Cash)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimMethod\": \"cash\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/claims/:token",
+              "host": ["{{baseUrl}}"],
+              "path": ["claims", ":token"],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "claim_token_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrToken\": \"qr_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/claims/validate-qr",
+              "host": ["{{baseUrl}}"],
+              "path": ["claims", "validate-qr"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"envelopeId\": \"envelope_id_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "create"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/:paymentId/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", ":paymentId", "status"],
+              "variable": [
+                {
+                  "key": "paymentId",
+                  "value": "payment_id_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mock Payment Success (Dev Only)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/mock-success/:envelopeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "mock-success", ":envelopeId"],
+              "variable": [
+                {
+                  "key": "envelopeId",
+                  "value": "envelope_id_here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

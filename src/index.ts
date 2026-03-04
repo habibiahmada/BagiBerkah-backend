@@ -1,30 +1,62 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { errorHandler } from './middlewares/errorHandler';
 import { rateLimiter } from './middlewares/rateLimiter';
+import { requestLogger } from './middlewares/requestLogger';
+import {
+  sanitizeMongo,
+  sanitizeInput,
+  requestSizeLimiter,
+  enforceHTTPS,
+  requestId,
+  securityHeaders,
+} from './middlewares/security';
 import routes from './routes';
+import logger from './config/logger';
+import { env } from './config/env';
+import { helmetConfig, corsConfig } from './config/security';
 
 // Load environment variables
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+const app: express.Application = express();
+const PORT = env.PORT || 5000;
 
-// Middlewares
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(rateLimiter);
+// Trust proxy (for rate limiting and IP detection)
+app.set('trust proxy', 1);
 
-// Health check
+// Security Middlewares (Order matters!)
+app.use(helmetConfig); // Helmet security headers
+app.use(securityHeaders); // Additional security headers
+app.use(enforceHTTPS); // HTTPS enforcement (production only)
+app.use(requestId); // Request ID tracking
+app.use(cors(corsConfig)); // CORS with strict configuration
+
+// Body parsing with size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Request size limiter
+app.use(requestSizeLimiter(1024 * 1024)); // 1MB max
+
+// Input sanitization
+app.use(sanitizeMongo); // MongoDB injection prevention
+app.use(sanitizeInput); // XSS and SQL injection prevention
+
+// Rate limiting
+app.use(rateLimiter); // General rate limiting
+
+// Request logging
+app.use(requestLogger);
+
+// Health check (before routes)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: env.NODE_ENV,
+  });
 });
 
 // API Routes
@@ -35,9 +67,11 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  logger.info(`🚀 Server running on port ${PORT}`);
+  logger.info(`📝 Environment: ${env.NODE_ENV}`);
+  logger.info(`🌐 Frontend URL: ${env.FRONTEND_URL}`);
+  logger.info(`🔗 API URL: ${env.APP_URL}`);
+  logger.info(`🔒 Security: Enhanced mode enabled`);
 });
 
 export default app;

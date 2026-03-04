@@ -1,15 +1,21 @@
 import prisma from '../config/database';
 import { AppError } from '../middlewares/errorHandler';
 import { SubmitClaimInput } from '../validators/claim.validator';
+import { DisbursementService } from './disbursement.service';
 import crypto from 'crypto';
 
 export class ClaimService {
+  private disbursementService: DisbursementService;
+
+  constructor() {
+    this.disbursementService = new DisbursementService();
+  }
   /**
    * Create claim for recipient
    */
   async createClaim(recipientId: string) {
-    const token = this.generateToken();
-    const qrToken = this.generateToken();
+    const token = this.generateSecureToken();
+    const qrToken = this.generateSecureToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiry
 
@@ -121,14 +127,22 @@ export class ClaimService {
       },
     });
 
-    // For digital mode, initiate transfer (placeholder)
-    if (data.claimMethod === 'digital') {
-      // TODO: Integrate with payment gateway for disbursement
-      console.log('Digital transfer initiated:', {
-        amount: updatedClaim.recipient.allocatedAmount,
-        bankAccount: data.bankAccount,
-        bankName: data.bankName,
-      });
+    // For digital mode, initiate transfer
+    if (data.claimMethod === 'digital' && data.bankAccount && data.bankName) {
+      try {
+        const disbursement = await this.disbursementService.processTransfer(
+          updatedClaim.id,
+          data.bankAccount,
+          data.bankName,
+          updatedClaim.recipient.allocatedAmount
+        );
+
+        console.log('✅ Digital transfer initiated:', disbursement);
+      } catch (error: any) {
+        console.error('❌ Disbursement error:', error.message);
+        // Don't fail the claim if disbursement fails
+        // Admin can retry manually
+      }
     }
 
     return {
@@ -203,9 +217,10 @@ export class ClaimService {
   }
 
   /**
-   * Generate secure token
+   * Generate cryptographically secure token
+   * 256 bits (32 bytes) for maximum security
    */
-  private generateToken(): string {
+  private generateSecureToken(): string {
     return crypto.randomBytes(32).toString('hex');
   }
 }

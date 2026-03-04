@@ -53,4 +53,19 @@ export class PaymentController {
       next(error);
     }
   };
+
+  // Mock payment success for development
+  mockPaymentSuccess = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { envelopeId } = req.params;
+      await this.service.simulatePaymentSuccess(envelopeId);
+      
+      res.json({
+        success: true,
+        message: 'Payment simulated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

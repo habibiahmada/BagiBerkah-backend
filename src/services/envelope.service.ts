@@ -18,9 +18,11 @@ export class EnvelopeService {
     );
 
     if (totalAllocated !== data.totalBudget) {
+      const difference = data.totalBudget - totalAllocated;
       throw new AppError(
-        `Total allocated (${totalAllocated}) must equal total budget (${data.totalBudget})`,
-        400
+        `Total alokasi (Rp ${totalAllocated.toLocaleString('id-ID')}) harus sama dengan total budget (Rp ${data.totalBudget.toLocaleString('id-ID')}). Selisih: Rp ${Math.abs(difference).toLocaleString('id-ID')} ${difference > 0 ? 'kurang' : 'lebih'}`,
+        400,
+        'ERR_2003'
       );
     }
 

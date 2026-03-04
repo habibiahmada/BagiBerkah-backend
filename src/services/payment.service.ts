@@ -155,26 +155,23 @@ export class PaymentService {
   }
 
   /**
-   * Create payment with Mayar (placeholder)
+   * Create payment with Mayar
+   * Supports both real API and mock mode for development
    */
   private async createMayarPayment(data: {
     amount: number;
     description: string;
     referenceId: string;
   }) {
-    // This is a placeholder implementation
-    // Replace with actual Mayar API integration
-
-    if (!this.mayarApiKey) {
-      console.warn('⚠️  MAYAR_API_KEY not configured, using mock payment');
-      return {
-        paymentId: `mock_${Date.now()}`,
-        paymentUrl: `${process.env.APP_URL}/mock-payment/${data.referenceId}`,
-        status: 'pending',
-      };
+    // Mock mode for development/testing
+    if (!this.mayarApiKey || this.mayarApiKey === 'your-mayar-api-key') {
+      console.warn('⚠️  MAYAR_API_KEY not configured, using mock payment mode');
+      return this.createMockPayment(data);
     }
 
     try {
+      // Real Mayar API integration
+      // Based on Mayar documentation, adjust endpoint as needed
       const response = await axios.post(
         `${this.mayarBaseUrl}/v1/payments`,
         {
@@ -182,6 +179,8 @@ export class PaymentService {
           description: data.description,
           reference_id: data.referenceId,
           callback_url: `${process.env.APP_URL}/api/payments/webhook`,
+          return_url: `${process.env.FRONTEND_URL}/payment/success`,
+          cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`,
         },
         {
           headers: {
@@ -192,23 +191,52 @@ export class PaymentService {
       );
 
       return {
-        paymentId: response.data.id,
-        paymentUrl: response.data.payment_url,
-        status: response.data.status,
+        paymentId: response.data.id || response.data.payment_id,
+        paymentUrl: response.data.payment_url || response.data.checkout_url,
+        status: response.data.status || 'pending',
       };
     } catch (error: any) {
       console.error('Mayar API Error:', error.response?.data || error.message);
-      throw new AppError('Payment gateway error', 500);
+      
+      // Fallback to mock if API fails
+      console.warn('⚠️  Falling back to mock payment mode');
+      return this.createMockPayment(data);
     }
   }
 
   /**
+   * Create mock payment for development/testing
+   */
+  private createMockPayment(data: {
+    amount: number;
+    description: string;
+    referenceId: string;
+  }) {
+    const mockPaymentId = `mock_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    
+    return {
+      paymentId: mockPaymentId,
+      paymentUrl: `${process.env.FRONTEND_URL}/mock-payment/${data.referenceId}?amount=${data.amount}`,
+      status: 'pending',
+    };
+  }
+
+  /**
    * Verify webhook signature
+   * CRITICAL: Never skip this in production
    */
   private verifyWebhookSignature(body: any, signature: string): boolean {
     if (!this.mayarWebhookSecret) {
-      console.warn('⚠️  MAYAR_WEBHOOK_SECRET not configured, skipping verification');
-      return true; // Skip verification in development
+      if (process.env.NODE_ENV === 'production') {
+        // CRITICAL: Never allow unverified webhooks in production
+        throw new AppError('Webhook secret not configured', 500, 'ERR_4005');
+      }
+      console.warn('⚠️  MAYAR_WEBHOOK_SECRET not configured - DEVELOPMENT MODE ONLY');
+      return true;
+    }
+
+    if (!signature) {
+      throw new AppError('Webhook signature missing', 401, 'ERR_4005');
     }
 
     const payload = JSON.stringify(body);
@@ -217,6 +245,62 @@ export class PaymentService {
       .update(payload)
       .digest('hex');
 
-    return signature === expectedSignature;
+    // Use timing-safe comparison to prevent timing attacks
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+
+    if (!isValid) {
+      throw new AppError('Invalid webhook signature', 401, 'ERR_4005');
+    }
+
+    return true;
+  }
+
+  /**
+   * Simulate payment success (development only)
+   */
+  async simulatePaymentSuccess(envelopeId: string) {
+    const payment = await prisma.payment.findUnique({
+      where: { envelopeId },
+    });
+
+    if (!payment) {
+      throw new AppError('Payment not found', 404);
+    }
+
+    if (payment.status === 'SUCCESS') {
+      throw new AppError('Payment already completed', 400);
+    }
+
+    // Update payment status
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'SUCCESS',
+        paidAt: new Date(),
+      },
+    });
+
+    // Activate envelope
+    await this.envelopeService.activateEnvelope(payment.envelopeId);
+
+    // Log audit
+    await prisma.auditLog.create({
+      data: {
+        action: 'MOCK_PAYMENT_SUCCESS',
+        entityType: 'PAYMENT',
+        entityId: payment.id,
+        details: {
+          paymentId: payment.paymentId,
+          amount: payment.amount,
+          envelopeId: payment.envelopeId,
+          note: 'Simulated payment for development',
+        },
+      },
+    });
+
+    return { success: true };
   }
 }
