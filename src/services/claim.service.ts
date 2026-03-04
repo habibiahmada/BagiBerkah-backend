@@ -161,6 +161,8 @@ export class ClaimService {
    * Validate QR code
    */
   async validateQR(qrToken: string) {
+    console.log('🔍 Validating QR token:', qrToken);
+    
     const claim = await prisma.claim.findUnique({
       where: { qrToken },
       include: {
@@ -169,17 +171,26 @@ export class ClaimService {
     });
 
     if (!claim) {
+      console.log('❌ QR token not found');
       throw new AppError('Invalid QR code', 404);
     }
 
+    console.log('📋 Claim found:', {
+      id: claim.id,
+      status: claim.status,
+      recipientName: claim.recipient.name,
+    });
+
     // Check if already validated
     if (claim.status === 'VALIDATED') {
+      console.log('⚠️ QR code already validated');
       throw new AppError('QR code already used', 400);
     }
 
     // Check if claimed
     if (claim.status !== 'CLAIMED') {
-      throw new AppError('Claim must be submitted first', 400);
+      console.log('⚠️ Claim not in CLAIMED status, current status:', claim.status);
+      throw new AppError(`Claim must be submitted first. Current status: ${claim.status}`, 400);
     }
 
     // Validate
@@ -193,6 +204,8 @@ export class ClaimService {
         recipient: true,
       },
     });
+
+    console.log('✅ QR validated successfully for:', validated.recipient.name);
 
     // Log audit
     await prisma.auditLog.create({
