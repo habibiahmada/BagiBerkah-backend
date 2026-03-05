@@ -1,10 +1,16 @@
 import { openai, AI_MODEL } from '../config/openai';
 import { AllocationRequest, GreetingRequest } from '../validators/ai.validator';
 import { AppError } from '../middlewares/errorHandler';
+import { PlayableService } from './playable.service';
 
 export class AIService {
+  private playableService: PlayableService;
+
+  constructor() {
+    this.playableService = new PlayableService();
+  }
   /**
-   * Generate allocation recommendation using AI
+   * Generate allocation recommendation using AI with playable recommendations
    */
   async generateAllocation(request: AllocationRequest) {
     const { totalBudget, recipients } = request;
@@ -45,8 +51,28 @@ Always respond in JSON format with allocations array containing recipientIndex, 
         recipients.length
       );
 
+      // Generate playable recommendations for each recipient
+      const allocationsWithPlayable = await Promise.all(
+        allocations.map(async (allocation, index) => {
+          const recipient = recipients[index];
+          const playableRec = await this.playableService.recommendPlayable({
+            name: recipient.name,
+            ageLevel: recipient.ageLevel,
+            status: recipient.status,
+            closeness: recipient.closeness,
+          });
+
+          return {
+            ...allocation,
+            playableType: playableRec.playableType,
+            gameType: playableRec.gameType,
+            playableReasoning: playableRec.reasoning,
+          };
+        })
+      );
+
       return {
-        allocations,
+        allocations: allocationsWithPlayable,
         totalAllocated: totalBudget,
       };
     } catch (error: any) {
@@ -191,7 +217,7 @@ Respond in JSON format:
   /**
    * Rule-based allocation fallback
    */
-  private ruleBasedAllocation(totalBudget: number, recipients: any[]) {
+  private async ruleBasedAllocation(totalBudget: number, recipients: any[]) {
     const scores = recipients.map((r) => {
       let score = 1;
 
@@ -212,14 +238,29 @@ Respond in JSON format:
     });
 
     const totalScore = scores.reduce((sum, s) => sum + s, 0);
-    const allocations = scores.map((score, index) => {
-      const amount = Math.floor((score / totalScore) * totalBudget);
-      return {
-        recipientIndex: index,
-        amount,
-        reasoning: `Alokasi berdasarkan usia, status, dan kedekatan (skor: ${score.toFixed(1)})`,
-      };
-    });
+    const allocations = await Promise.all(
+      scores.map(async (score, index) => {
+        const amount = Math.floor((score / totalScore) * totalBudget);
+        const recipient = recipients[index];
+        
+        // Get playable recommendation
+        const playableRec = await this.playableService.recommendPlayable({
+          name: recipient.name,
+          ageLevel: recipient.ageLevel,
+          status: recipient.status,
+          closeness: recipient.closeness,
+        });
+
+        return {
+          recipientIndex: index,
+          amount,
+          reasoning: `Alokasi berdasarkan usia, status, dan kedekatan (skor: ${score.toFixed(1)})`,
+          playableType: playableRec.playableType,
+          gameType: playableRec.gameType,
+          playableReasoning: playableRec.reasoning,
+        };
+      })
+    );
 
     // Adjust for rounding
     const total = allocations.reduce((sum, a) => sum + a.amount, 0);

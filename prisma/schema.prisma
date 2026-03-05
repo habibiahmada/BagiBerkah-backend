@@ -57,6 +57,26 @@ enum PaymentStatus {
   EXPIRED
 }
 
+enum PlayableType {
+  DIRECT      // Langsung dapat
+  GAME        // Harus main game
+  QUIZ        // Harus jawab quiz
+}
+
+enum GameType {
+  MEMORY_CARD     // Memory card matching game
+  SPIN_WHEEL      // Spin the wheel
+  SCRATCH_CARD    // Scratch card reveal
+  BALLOON_POP     // Pop balloons
+  TREASURE_HUNT   // Find hidden treasure
+}
+
+enum QuizDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
 // Models
 model Envelope {
   id               String           @id @default(cuid())
@@ -94,6 +114,13 @@ model Recipient {
   aiReasoning      String?
   aiGreeting       String?
   
+  // Playable settings (per recipient)
+  playableType     PlayableType     @default(DIRECT)
+  gameType         GameType?        // If playableType = GAME
+  quizTopic        String?          // If playableType = QUIZ
+  quizDifficulty   QuizDifficulty?  // If playableType = QUIZ
+  quizQuestions    Json?            // Generated quiz questions
+  
   // Relations
   envelope         Envelope    @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
   envelopeId       String
@@ -116,6 +143,13 @@ model Claim {
   claimMethod      String?      // 'digital' or 'cash'
   bankAccount      String?
   bankName         String?
+  
+  // Playable progress
+  gameCompleted    Boolean      @default(false)
+  gameScore        Int?
+  gameAttempts     Int          @default(0)
+  gameStartedAt    DateTime?
+  gameCompletedAt  DateTime?
   
   // Relations
   recipient        Recipient    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
