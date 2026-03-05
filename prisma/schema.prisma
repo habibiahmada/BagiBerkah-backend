@@ -60,6 +60,8 @@ enum PaymentStatus {
 // Models
 model Envelope {
   id               String           @id @default(cuid())
+  envelopeName     String?          // Name/title for the envelope
+  accessCode       String?          @unique // Code to access envelope status
   totalBudget      Int
   distributionMode DistributionMode
   status           EnvelopeStatus   @default(DRAFT)
@@ -75,6 +77,7 @@ model Envelope {
   
   @@index([status])
   @@index([createdAt])
+  @@index([accessCode])
 }
 
 model Recipient {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const createEnvelopeSchema = z.object({
+  envelopeName: z.string().min(1, 'Nama amplop wajib diisi').max(100, 'Nama amplop maksimal 100 karakter'),
   totalBudget: z.number().min(10000, 'Total budget minimal Rp 10.000'),
   distributionMode: z.enum(['DIGITAL', 'CASH']),
   recipients: z.array(
@@ -18,4 +19,9 @@ export const createEnvelopeSchema = z.object({
   ).min(1, 'Minimal 1 penerima'),
 });
 
+export const checkEnvelopeSchema = z.object({
+  accessCode: z.string().min(1, 'Kode akses wajib diisi'),
+});
+
 export type CreateEnvelopeInput = z.infer<typeof createEnvelopeSchema>;
+export type CheckEnvelopeInput = z.infer<typeof checkEnvelopeSchema>;

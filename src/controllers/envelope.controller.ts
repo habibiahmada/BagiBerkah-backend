@@ -95,6 +95,19 @@ export class EnvelopeController {
     }
   };
 
+  checkByAccessCode = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const envelope = await this.service.checkByAccessCode(req.body);
+      
+      res.json({
+        success: true,
+        data: envelope,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

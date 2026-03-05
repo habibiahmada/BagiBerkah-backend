@@ -2,12 +2,15 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { EnvelopeController } from '../controllers/envelope.controller';
 import { validate } from '../middlewares/validator';
-import { createEnvelopeSchema } from '../validators/envelope.validator';
+import { createEnvelopeSchema, checkEnvelopeSchema } from '../validators/envelope.validator';
 import { envelopeCreationRateLimiter } from '../middlewares/rateLimiter';
 import { idempotency } from '../middlewares/security';
 
 const router: ExpressRouter = Router();
 const controller = new EnvelopeController();
+
+// Check envelope by access code - MUST BE BEFORE /:id
+router.post('/check', validate(checkEnvelopeSchema), controller.checkByAccessCode);
 
 // Create envelope (with idempotency and strict rate limit)
 router.post('/', envelopeCreationRateLimiter, idempotency, validate(createEnvelopeSchema), controller.create);

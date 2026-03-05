@@ -1,13 +1,21 @@
 import prisma from '../config/database';
-import { CreateEnvelopeInput } from '../validators/envelope.validator';
+import { CreateEnvelopeInput, CheckEnvelopeInput } from '../validators/envelope.validator';
 import { AppError } from '../middlewares/errorHandler';
 import { ClaimService } from './claim.service';
+import crypto from 'crypto';
 
 export class EnvelopeService {
   private claimService: ClaimService;
 
   constructor() {
     this.claimService = new ClaimService();
+  }
+
+  /**
+   * Generate unique access code for envelope
+   */
+  private generateAccessCode(): string {
+    return crypto.randomBytes(4).toString('hex').toUpperCase();
   }
 
   async create(data: CreateEnvelopeInput) {
@@ -26,9 +34,14 @@ export class EnvelopeService {
       );
     }
 
+    // Generate unique access code
+    const accessCode = this.generateAccessCode();
+
     // Create envelope with recipients
     const envelope = await prisma.envelope.create({
       data: {
+        envelopeName: data.envelopeName,
+        accessCode,
         totalBudget: data.totalBudget,
         distributionMode: data.distributionMode,
         status: data.distributionMode === 'DIGITAL' ? 'PENDING_PAYMENT' : 'ACTIVE',
@@ -54,6 +67,25 @@ export class EnvelopeService {
     // Create claims for each recipient
     for (const recipient of envelope.recipients) {
       await this.claimService.createClaim(recipient.id);
+    }
+
+    return {
+      ...envelope,
+      accessCode, // Return access code to show to user
+    };
+  }
+
+  async checkByAccessCode(data: CheckEnvelopeInput) {
+    const envelope = await prisma.envelope.findUnique({
+      where: { accessCode: data.accessCode },
+      select: {
+        id: true,
+        envelopeName: true,
+      },
+    });
+
+    if (!envelope) {
+      throw new AppError('Amplop tidak ditemukan. Periksa kembali kode akses Anda.', 404);
     }
 
     return envelope;
