@@ -175,6 +175,8 @@ Rules:
 - Very close family members may receive slightly more
 - Total must equal exactly Rp ${totalBudget.toLocaleString('id-ID')}
 - Minimum allocation per person: Rp 10,000
+- ALL amounts MUST be in multiples of 1,000 (e.g., 15000, 20000, 50000) - NO decimal values
+- Use round numbers only (10000, 15000, 20000, etc.)
 
 Respond in JSON format:
 {
@@ -186,6 +188,13 @@ Respond in JSON format:
     }
   ]
 }`;
+  }
+
+  /**
+   * Round amount to nearest thousand (kelipatan 1000)
+   */
+  private roundToThousand(amount: number): number {
+    return Math.round(amount / 1000) * 1000;
   }
 
   /**
@@ -201,15 +210,37 @@ Respond in JSON format:
       throw new AppError('AI allocation count mismatch', 500);
     }
 
-    // Calculate total
+    // Round all amounts to nearest thousand
+    allocations = allocations.map(a => ({
+      ...a,
+      amount: this.roundToThousand(a.amount)
+    }));
+
+    // Calculate total after rounding
     let total = allocations.reduce((sum, a) => sum + a.amount, 0);
 
-    // Adjust if needed
+    // Adjust if needed to match exact budget
     if (total !== totalBudget) {
       const diff = totalBudget - total;
-      // Add/subtract difference to the first allocation
-      allocations[0].amount += diff;
+      
+      // Distribute difference in multiples of 1000
+      const diffInThousands = Math.round(diff / 1000);
+      
+      if (diffInThousands !== 0) {
+        // Add/subtract to the largest allocation to minimize impact
+        const largestIndex = allocations.reduce((maxIdx, curr, idx, arr) => 
+          curr.amount > arr[maxIdx].amount ? idx : maxIdx, 0
+        );
+        
+        allocations[largestIndex].amount += diffInThousands * 1000;
+      }
     }
+
+    // Ensure minimum allocation of 10,000
+    allocations = allocations.map(a => ({
+      ...a,
+      amount: Math.max(10000, a.amount)
+    }));
 
     return allocations;
   }
@@ -240,7 +271,9 @@ Respond in JSON format:
     const totalScore = scores.reduce((sum, s) => sum + s, 0);
     const allocations = await Promise.all(
       scores.map(async (score, index) => {
-        const amount = Math.floor((score / totalScore) * totalBudget);
+        // Calculate proportional amount and round to nearest thousand
+        const rawAmount = (score / totalScore) * totalBudget;
+        const amount = this.roundToThousand(rawAmount);
         const recipient = recipients[index];
         
         // Get playable recommendation
@@ -262,9 +295,28 @@ Respond in JSON format:
       })
     );
 
-    // Adjust for rounding
+    // Adjust for rounding to match exact budget
     const total = allocations.reduce((sum, a) => sum + a.amount, 0);
-    allocations[0].amount += totalBudget - total;
+    const diff = totalBudget - total;
+    
+    if (diff !== 0) {
+      // Distribute difference in multiples of 1000
+      const diffInThousands = Math.round(diff / 1000);
+      
+      if (diffInThousands !== 0) {
+        // Add/subtract to the largest allocation
+        const largestIndex = allocations.reduce((maxIdx, curr, idx, arr) => 
+          curr.amount > arr[maxIdx].amount ? idx : maxIdx, 0
+        );
+        
+        allocations[largestIndex].amount += diffInThousands * 1000;
+      }
+    }
+
+    // Ensure minimum allocation of 10,000
+    allocations.forEach(a => {
+      a.amount = Math.max(10000, a.amount);
+    });
 
     return {
       allocations,
