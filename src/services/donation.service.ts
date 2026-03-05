@@ -93,12 +93,20 @@ export class DonationService {
       });
 
       // Extract payment URL and ID from Mayar invoice response
-      const paymentUrl = response.data.url || response.data.data?.url || response.data.invoiceUrl;
-      const paymentId = response.data.id || response.data.data?.id || response.data.invoiceId || productId;
+      // Response structure: { statusCode, messages, data: { id, link, transactionId, expiredAt } }
+      const responseData = response.data.data || response.data;
+      const paymentUrl = responseData.link || responseData.url || response.data.url || response.data.invoiceUrl;
+      const paymentId = responseData.id || responseData.transactionId || response.data.id || productId;
 
       if (!paymentUrl) {
+        console.error('❌ Payment URL not found. Full response:', JSON.stringify(response.data, null, 2));
         throw new Error('Payment URL not found in Mayar response');
       }
+
+      console.log('✅ Payment link created:', {
+        paymentId,
+        paymentUrl,
+      });
 
       // Save donation record
       const donation = await prisma.donation.create({
