@@ -17,4 +17,7 @@ router.post('/allocate', validate(allocationRequestSchema), controller.allocate)
 // Generate personal greeting
 router.post('/greeting', validate(greetingRequestSchema), controller.generateGreeting);
 
+// Generate quiz questions
+router.post('/generate-quiz', controller.generateQuiz);
+
 export default router;
