@@ -2,6 +2,7 @@ import prisma from '../config/database';
 import { CreateEnvelopeInput, CheckEnvelopeInput } from '../validators/envelope.validator';
 import { AppError } from '../middlewares/errorHandler';
 import { ClaimService } from './claim.service';
+import { getQuizTemplate } from '../data/quiz-templates';
 import crypto from 'crypto';
 
 export class EnvelopeService {
@@ -46,17 +47,34 @@ export class EnvelopeService {
         distributionMode: data.distributionMode,
         status: data.distributionMode === 'DIGITAL' ? 'PENDING_PAYMENT' : 'ACTIVE',
         recipients: {
-          create: data.recipients.map((recipient) => ({
-            name: recipient.name,
-            ageLevel: recipient.ageLevel,
-            status: recipient.status,
-            closeness: recipient.closeness,
-            contact: recipient.contact,
-            greetingContext: recipient.greetingContext,
-            allocatedAmount: recipient.allocatedAmount,
-            aiReasoning: recipient.aiReasoning,
-            aiGreeting: recipient.aiGreeting,
-          })),
+          create: data.recipients.map((recipient) => {
+            // Load quiz questions from template if playableType is QUIZ
+            let quizQuestions = null;
+            if (recipient.playableType === 'QUIZ' && recipient.quizTopic) {
+              const template = getQuizTemplate(recipient.quizTopic);
+              if (template) {
+                quizQuestions = template.questions;
+              }
+            }
+
+            return {
+              name: recipient.name,
+              ageLevel: recipient.ageLevel,
+              status: recipient.status,
+              closeness: recipient.closeness,
+              contact: recipient.contact,
+              greetingContext: recipient.greetingContext,
+              allocatedAmount: recipient.allocatedAmount,
+              aiReasoning: recipient.aiReasoning,
+              aiGreeting: recipient.aiGreeting,
+              // Playable data
+              playableType: recipient.playableType || 'DIRECT',
+              gameType: recipient.gameType,
+              quizTopic: recipient.quizTopic,
+              quizDifficulty: recipient.quizDifficulty,
+              quizQuestions: quizQuestions,
+            };
+          }),
         },
       },
       include: {
