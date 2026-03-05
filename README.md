@@ -69,8 +69,8 @@ See `.env.example` for all available variables.
 **Mayar (Support Developer)**:
 - Used for donation and support developer features
 - Requires `MAYAR_API_KEY` for production
-- Sandbox: `https://api.mayar.club/hl/v1`
-- Production: `https://api.mayar.id`
+- Production API: `https://api.mayar.id/hl/v1`
+- Dashboard: `https://web.mayar.id` (production) or `https://web.mayar.club` (sandbox)
 
 ---
 

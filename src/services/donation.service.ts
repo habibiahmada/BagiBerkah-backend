@@ -8,7 +8,14 @@ export class DonationService {
 
   constructor() {
     this.mayarApiKey = process.env.MAYAR_API_KEY || '';
-    this.mayarBaseUrl = process.env.MAYAR_BASE_URL || 'https://api.mayar.club/hl/v1';
+    this.mayarBaseUrl = process.env.MAYAR_BASE_URL || 'https://api.mayar.id/hl/v1';
+    
+    // Log configuration on startup
+    console.log('🔧 Mayar Service initialized:', {
+      hasApiKey: !!this.mayarApiKey,
+      apiKeyLength: this.mayarApiKey?.length || 0,
+      baseUrl: this.mayarBaseUrl,
+    });
   }
 
   /**
@@ -45,24 +52,30 @@ export class DonationService {
         apiKeyPrefix: this.mayarApiKey.substring(0, 30) + '...',
       });
 
-      // Mayar API format - with required fields
+      // Mayar API format - using invoice/create endpoint
       const requestBody = {
-        amount: data.amount,
-        description: `Dukungan untuk BagiBerkah${data.donorName ? ` dari ${data.donorName}` : ''}`,
-        productId: productId,
+        name: data.donorName || 'Anonymous',
         email: data.donorEmail || 'anonymous@bagiberkah.com',
         mobile: data.donorPhone || '081234567890',
-        successUrl: `${process.env.FRONTEND_URL}/support/success`,
-        cancelUrl: `${process.env.FRONTEND_URL}/support`,
+        redirectURL: `${process.env.FRONTEND_URL}/support/success`,
+        description: `Dukungan untuk BagiBerkah${data.donorName ? ` dari ${data.donorName}` : ''}`,
+        expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        items: [
+          {
+            name: 'Donasi BagiBerkah',
+            quantity: 1,
+            rate: data.amount,
+          }
+        ],
       };
 
       console.log('📤 Mayar request:', {
-        url: `${this.mayarBaseUrl}/payment`,
+        url: `${this.mayarBaseUrl}/invoice/create`,
         body: requestBody,
       });
 
       const response = await axios.post(
-        `${this.mayarBaseUrl}/payment`,
+        `${this.mayarBaseUrl}/invoice/create`,
         requestBody,
         {
           headers: {
@@ -78,9 +91,9 @@ export class DonationService {
         data: response.data,
       });
 
-      // Extract payment URL and ID from response
-      const paymentUrl = response.data.url || response.data.data?.url || response.data.paymentUrl;
-      const paymentId = response.data.id || response.data.data?.id || productId;
+      // Extract payment URL and ID from Mayar invoice response
+      const paymentUrl = response.data.url || response.data.data?.url || response.data.invoiceUrl;
+      const paymentId = response.data.id || response.data.data?.id || response.data.invoiceId || productId;
 
       if (!paymentUrl) {
         throw new Error('Payment URL not found in Mayar response');

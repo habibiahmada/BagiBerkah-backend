@@ -18,7 +18,7 @@ const envSchema = z.object({
   // Mayar Payment Gateway
   MAYAR_API_KEY: z.string().optional(),
   MAYAR_WEBHOOK_SECRET: z.string().optional(),
-  MAYAR_BASE_URL: z.string().default('https://api.mayar.id'),
+  MAYAR_BASE_URL: z.string().default('https://api.mayar.id/hl/v1'),
   
   // URLs
   FRONTEND_URL: z.string().default('http://localhost:3000'),
