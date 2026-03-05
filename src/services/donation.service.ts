@@ -27,15 +27,15 @@ export class DonationService {
 
     try {
       // Create Mayar payment link for donation
+      // Mayar API: https://docs.mayar.id/api-reference/payment/create
       const response = await axios.post(
-        `${this.mayarBaseUrl}/v1/payments`,
+        `${this.mayarBaseUrl}/payment/create`,
         {
           amount: data.amount,
           description: `Dukungan untuk BagiBerkah${data.donorName ? ` dari ${data.donorName}` : ''}`,
-          reference_id: `donation_${Date.now()}`,
-          callback_url: `${process.env.APP_URL}/api/donations/webhook`,
-          return_url: `${process.env.FRONTEND_URL}/support/success`,
-          cancel_url: `${process.env.FRONTEND_URL}/support`,
+          externalId: `donation_${Date.now()}`,
+          callbackUrl: `${process.env.APP_URL}/api/donations/webhook`,
+          redirectUrl: `${process.env.FRONTEND_URL}/support/success`,
         },
         {
           headers: {
@@ -48,12 +48,12 @@ export class DonationService {
       // Save donation record
       const donation = await prisma.donation.create({
         data: {
-          paymentId: response.data.id || response.data.payment_id,
+          paymentId: response.data.data?.id || response.data.id || `mayar_${Date.now()}`,
           amount: data.amount,
           donorName: data.donorName || 'Anonymous',
           message: data.message,
           status: 'PENDING',
-          paymentUrl: response.data.payment_url || response.data.checkout_url,
+          paymentUrl: response.data.data?.url || response.data.url || response.data.paymentUrl,
         },
       });
 
@@ -115,7 +115,7 @@ export class DonationService {
     const recentDonations = await prisma.donation.findMany({
       where: { status: 'SUCCESS' },
       orderBy: { createdAt: 'desc' },
-      take: 5,
+      take: 6,
       select: {
         donorName: true,
         amount: true,
@@ -129,5 +129,59 @@ export class DonationService {
       totalAmount: totalAmount._sum.amount || 0,
       recentDonations,
     };
+  }
+
+  /**
+   * Update donation status (called by webhook)
+   */
+  async updateDonationStatus(paymentId: string, status: 'SUCCESS' | 'FAILED') {
+    const donation = await prisma.donation.findUnique({
+      where: { paymentId },
+    });
+
+    if (!donation) {
+      throw new AppError('Donation not found', 404);
+    }
+
+    await prisma.donation.update({
+      where: { paymentId },
+      data: {
+        status,
+        paidAt: status === 'SUCCESS' ? new Date() : null,
+      },
+    });
+
+    console.log(`✅ Donation ${paymentId} status updated to ${status}`);
+  }
+
+  /**
+   * Update donation status by externalId (for Mayar webhook)
+   */
+  async updateDonationStatusByExternalId(externalId: string, status: 'SUCCESS' | 'FAILED') {
+    // externalId format: "donation_1234567890"
+    // We need to find donation by paymentId that contains this externalId
+    
+    const donation = await prisma.donation.findFirst({
+      where: {
+        paymentId: {
+          contains: externalId,
+        },
+      },
+    });
+
+    if (!donation) {
+      console.error(`❌ Donation not found for externalId: ${externalId}`);
+      throw new AppError('Donation not found', 404);
+    }
+
+    await prisma.donation.update({
+      where: { id: donation.id },
+      data: {
+        status,
+        paidAt: status === 'SUCCESS' ? new Date() : null,
+      },
+    });
+
+    console.log(`✅ Donation ${donation.id} (${externalId}) status updated to ${status}`);
   }
 }

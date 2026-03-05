@@ -23,4 +23,6 @@ router.post(
 
 router.get('/stats', donationController.getStats);
 
+router.post('/webhook', donationController.handleWebhook);
+
 export default router;
