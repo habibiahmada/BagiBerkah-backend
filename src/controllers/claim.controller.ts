@@ -69,10 +69,4 @@ export class ClaimController {
     }
   };
 }
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-}
+
