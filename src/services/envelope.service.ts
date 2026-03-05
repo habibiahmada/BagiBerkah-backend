@@ -53,7 +53,7 @@ export class EnvelopeService {
             if (recipient.playableType === 'QUIZ' && recipient.quizTopic) {
               const template = getQuizTemplate(recipient.quizTopic);
               if (template) {
-                quizQuestions = template.questions;
+                quizQuestions = template.questions as any;
               }
             }
 

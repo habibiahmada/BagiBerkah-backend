@@ -24,6 +24,11 @@ export const createEnvelopeSchema = z.object({
         }),
       aiReasoning: z.string().optional(),
       aiGreeting: z.string().optional(),
+      // Playable fields
+      playableType: z.enum(['DIRECT', 'GAME', 'QUIZ']).optional().default('DIRECT'),
+      gameType: z.enum(['MEMORY_CARD', 'SCRATCH_CARD', 'SPIN_WHEEL', 'BALLOON_POP', 'TREASURE_HUNT']).optional(),
+      quizTopic: z.string().optional(),
+      quizDifficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional(),
     })
   ).min(1, 'Minimal 1 penerima'),
 });
