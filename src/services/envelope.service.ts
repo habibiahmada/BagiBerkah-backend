@@ -126,17 +126,14 @@ export class EnvelopeService {
       return null;
     }
 
-    // Ensure playable data is included
-    return {
-      ...envelope,
-      recipients: envelope.recipients.map(r => ({
-        ...r,
-        playableType: r.playableType || 'DIRECT',
-        gameType: r.gameType,
-        quizTopic: r.quizTopic,
-        quizDifficulty: r.quizDifficulty,
-      })),
-    };
+    console.log('📦 Backend getById - Envelope:', envelope.id);
+    console.log('👥 Backend getById - Recipients:', envelope.recipients.map(r => ({
+      name: r.name,
+      playableType: r.playableType,
+      gameType: r.gameType,
+    })));
+
+    return envelope;
   }
 
   async getStatus(id: string) {
