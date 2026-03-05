@@ -13,11 +13,13 @@ export class DonationController {
    */
   createDonation = async (req: Request, res: Response) => {
     try {
-      const { amount, donorName, message } = req.body;
+      const { amount, donorName, donorEmail, donorPhone, message } = req.body;
 
       const donation = await this.donationService.createDonation({
         amount,
         donorName,
+        donorEmail,
+        donorPhone,
         message,
       });
 

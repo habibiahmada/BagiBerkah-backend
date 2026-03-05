@@ -50,8 +50,16 @@ app.use(rateLimiter); // General rate limiting
 // Request logging
 app.use(requestLogger);
 
-// Health check (before routes)
+// Health check (accessible from both root and /api)
 app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: env.NODE_ENV,
+  });
+});
+
+app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -61,6 +69,17 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api', routes);
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'ERR_1002',
+      message: `Route ${req.method} ${req.path} not found`,
+    },
+  });
+});
 
 // Error handler (must be last)
 app.use(errorHandler);

@@ -15,9 +15,12 @@ export const validate = (schema: ZodSchema) => {
         }));
         
         return res.status(400).json({
-          error: true,
-          message: 'Validation failed',
-          errors,
+          success: false,
+          error: {
+            code: 'ERR_1001',
+            message: 'Validasi gagal',
+            details: errors,
+          },
         });
       }
       next(error);

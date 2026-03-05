@@ -64,11 +64,18 @@ export const helmetConfig = helmet({
  */
 export const corsConfig = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // In development, allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
     const allowedOrigins = [
       process.env.FRONTEND_URL,
       'http://localhost:3000',
       'http://localhost:3001',
-    ];
+      'http://192.168.1.3:3000',
+      'http://127.0.0.1:3000',
+    ].filter(Boolean); // Remove undefined values
     
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
@@ -78,6 +85,7 @@ export const corsConfig = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },

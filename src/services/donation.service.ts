@@ -8,7 +8,7 @@ export class DonationService {
 
   constructor() {
     this.mayarApiKey = process.env.MAYAR_API_KEY || '';
-    this.mayarBaseUrl = process.env.MAYAR_BASE_URL || 'https://api.mayar.id';
+    this.mayarBaseUrl = process.env.MAYAR_BASE_URL || 'https://api.mayar.club/hl/v1';
   }
 
   /**
@@ -17,6 +17,8 @@ export class DonationService {
   async createDonation(data: {
     amount: number;
     donorName?: string;
+    donorEmail?: string;
+    donorPhone?: string;
     message?: string;
   }) {
     // Mock mode for development
@@ -27,35 +29,76 @@ export class DonationService {
 
     try {
       // Create Mayar payment link for donation
-      // Mayar API: https://docs.mayar.id/api-reference/payment/create
+      // Mayar API: https://docs.mayar.club
+      const productId = `donation_${Date.now()}`;
+      
+      // Validate API key
+      if (!this.mayarApiKey || this.mayarApiKey.length < 50) {
+        throw new Error('Invalid or missing MAYAR_API_KEY');
+      }
+
+      console.log('🔄 Creating Mayar donation payment:', {
+        amount: data.amount,
+        productId,
+        baseUrl: this.mayarBaseUrl,
+        apiKeyLength: this.mayarApiKey.length,
+        apiKeyPrefix: this.mayarApiKey.substring(0, 30) + '...',
+      });
+
+      // Mayar API format - with required fields
+      const requestBody = {
+        amount: data.amount,
+        description: `Dukungan untuk BagiBerkah${data.donorName ? ` dari ${data.donorName}` : ''}`,
+        productId: productId,
+        email: data.donorEmail || 'anonymous@bagiberkah.com',
+        mobile: data.donorPhone || '081234567890',
+        successUrl: `${process.env.FRONTEND_URL}/support/success`,
+        cancelUrl: `${process.env.FRONTEND_URL}/support`,
+      };
+
+      console.log('📤 Mayar request:', {
+        url: `${this.mayarBaseUrl}/payment`,
+        body: requestBody,
+      });
+
       const response = await axios.post(
-        `${this.mayarBaseUrl}/payment/create`,
-        {
-          amount: data.amount,
-          description: `Dukungan untuk BagiBerkah${data.donorName ? ` dari ${data.donorName}` : ''}`,
-          externalId: `donation_${Date.now()}`,
-          callbackUrl: `${process.env.APP_URL}/api/donations/webhook`,
-          redirectUrl: `${process.env.FRONTEND_URL}/support/success`,
-        },
+        `${this.mayarBaseUrl}/payment`,
+        requestBody,
         {
           headers: {
-            Authorization: `Bearer ${this.mayarApiKey}`,
+            'Authorization': `Bearer ${this.mayarApiKey}`,
             'Content-Type': 'application/json',
           },
+          timeout: 10000,
         }
       );
+
+      console.log('✅ Mayar response:', {
+        status: response.status,
+        data: response.data,
+      });
+
+      // Extract payment URL and ID from response
+      const paymentUrl = response.data.url || response.data.data?.url || response.data.paymentUrl;
+      const paymentId = response.data.id || response.data.data?.id || productId;
+
+      if (!paymentUrl) {
+        throw new Error('Payment URL not found in Mayar response');
+      }
 
       // Save donation record
       const donation = await prisma.donation.create({
         data: {
-          paymentId: response.data.data?.id || response.data.id || `mayar_${Date.now()}`,
+          paymentId: paymentId,
           amount: data.amount,
           donorName: data.donorName || 'Anonymous',
           message: data.message,
           status: 'PENDING',
-          paymentUrl: response.data.data?.url || response.data.url || response.data.paymentUrl,
+          paymentUrl: paymentUrl,
         },
       });
+
+      console.log('✅ Donation created:', donation.id);
 
       return {
         donationId: donation.id,
@@ -63,9 +106,30 @@ export class DonationService {
         amount: donation.amount,
       };
     } catch (error: any) {
-      console.error('Mayar Donation Error:', error.response?.data || error.message);
+      // Detailed error logging
+      const errorDetails = {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        baseUrl: this.mayarBaseUrl,
+        hasApiKey: !!this.mayarApiKey,
+        apiKeyLength: this.mayarApiKey?.length || 0,
+        apiKeyStart: this.mayarApiKey ? this.mayarApiKey.substring(0, 30) + '...' : 'none',
+      };
+
+      console.error('❌ Mayar Donation Error:', errorDetails);
       
-      // Fallback to mock
+      // In production, throw error instead of fallback
+      if (process.env.NODE_ENV === 'production') {
+        throw new AppError(
+          'Gagal membuat payment link. Silakan coba lagi atau hubungi support.',
+          500,
+          'ERR_PAYMENT_CREATION_FAILED'
+        );
+      }
+      
+      // Fallback to mock only in development
       console.warn('⚠️  Falling back to mock donation mode');
       return this.createMockDonation(data);
     }
@@ -77,6 +141,8 @@ export class DonationService {
   private async createMockDonation(data: {
     amount: number;
     donorName?: string;
+    donorEmail?: string;
+    donorPhone?: string;
     message?: string;
   }) {
     const mockPaymentId = `mock_donation_${Date.now()}`;
