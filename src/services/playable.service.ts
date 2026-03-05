@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { env } from '../config/env';
 import logger from '../config/logger';
+import { getQuizTemplate, getAllQuizTemplates } from '../data/quiz-templates';
 
 interface RecipientProfile {
   name: string;
@@ -103,26 +104,24 @@ Berikan rekomendasi dalam format JSON:
 
   /**
    * Generate quiz questions based on topic and difficulty
+   * Falls back to hardcoded templates if AI unavailable
    */
   async generateQuiz(
     topic: string,
     difficulty: 'EASY' | 'MEDIUM' | 'HARD',
     count: number = 5
   ): Promise<QuizQuestion[]> {
-    // Fallback if no OpenAI
-    if (!this.openai) {
-      return this.getFallbackQuiz(topic, difficulty, count);
-    }
+    // Try AI first if available
+    if (this.openai) {
+      try {
+        const prompt = this.buildQuizPrompt(topic, difficulty, count);
 
-    try {
-      const prompt = this.buildQuizPrompt(topic, difficulty, count);
-
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `Anda adalah AI yang membuat soal quiz berkualitas tinggi dalam bahasa Indonesia.
+        const completion = await this.openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `Anda adalah AI yang membuat soal quiz berkualitas tinggi dalam bahasa Indonesia.
 
 Aturan:
 - Setiap soal harus memiliki 4 pilihan jawaban
@@ -142,36 +141,73 @@ Format JSON:
     }
   ]
 }`,
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.8,
-        response_format: { type: 'json_object' },
-      });
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.8,
+          response_format: { type: 'json_object' },
+        });
 
-      const response = completion.choices[0]?.message?.content;
-      if (!response) {
-        throw new Error('No response from OpenAI');
+        const response = completion.choices[0]?.message?.content;
+        if (!response) {
+          throw new Error('No response from OpenAI');
+        }
+
+        const result = JSON.parse(response);
+        const questions = result.questions as QuizQuestion[];
+
+        // Validate questions
+        if (this.isValidQuiz(questions, count)) {
+          logger.info(`Generated ${questions.length} quiz questions for topic: ${topic}`);
+          return questions;
+        }
+      } catch (error: any) {
+        logger.warn('AI quiz generation failed, using template:', error.message);
       }
-
-      const result = JSON.parse(response);
-      const questions = result.questions as QuizQuestion[];
-
-      // Validate questions
-      if (!this.isValidQuiz(questions, count)) {
-        logger.warn('Invalid AI quiz, using fallback');
-        return this.getFallbackQuiz(topic, difficulty, count);
-      }
-
-      logger.info(`Generated ${questions.length} quiz questions for topic: ${topic}`);
-      return questions;
-    } catch (error) {
-      logger.error('Error generating quiz:', error);
-      return this.getFallbackQuiz(topic, difficulty, count);
     }
+
+    // Fallback to template
+    logger.info(`Using quiz template for topic: ${topic}`);
+    return this.getQuizFromTemplate(topic, difficulty, count);
+  }
+
+  /**
+   * Get quiz from hardcoded templates
+   */
+  private getQuizFromTemplate(
+    topic: string,
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
+    count: number
+  ): QuizQuestion[] {
+    // Try to find matching template by topic
+    const templates = getAllQuizTemplates();
+    
+    // Simple keyword matching
+    const topicLower = topic.toLowerCase();
+    let matchedTemplate = templates.find((t) => {
+      const nameLower = t.name.toLowerCase();
+      return (
+        topicLower.includes(nameLower) ||
+        nameLower.includes(topicLower) ||
+        t.description.toLowerCase().includes(topicLower)
+      );
+    });
+
+    // If no match, use first template with matching difficulty
+    if (!matchedTemplate) {
+      matchedTemplate = templates.find((t) => t.difficulty === difficulty);
+    }
+
+    // If still no match, use first template
+    if (!matchedTemplate) {
+      matchedTemplate = templates[0];
+    }
+
+    // Return questions (limit to requested count)
+    return matchedTemplate.questions.slice(0, count);
   }
 
   /**
@@ -307,21 +343,9 @@ Pastikan:
   }
 
   /**
-   * Fallback quiz with generic questions
+   * Fallback quiz with generic questions (deprecated - use templates instead)
    */
   private getFallbackQuiz(topic: string, difficulty: string, count: number): QuizQuestion[] {
-    // Return generic questions about the topic
-    const questions: QuizQuestion[] = [];
-
-    for (let i = 0; i < count; i++) {
-      questions.push({
-        question: `Pertanyaan ${i + 1} tentang ${topic}`,
-        options: ['Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D'],
-        correctAnswer: 0,
-        explanation: 'Ini adalah soal contoh. Silakan gunakan OpenAI API untuk soal yang lebih baik.',
-      });
-    }
-
-    return questions;
+    return this.getQuizFromTemplate(topic, difficulty as any, count);
   }
 }
