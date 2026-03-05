@@ -132,9 +132,14 @@ backend/
 - `POST /claims/validate-qr` - Validate QR
 
 **Payments:**
-- `POST /payments/create` - Create payment
-- `GET /payments/:paymentId/status` - Get status
+- `POST /payments/create` - Create payment (Xendit)
+- `GET /payments/:paymentId/status` - Get payment status
+- `POST /payments/webhook` - Xendit webhook handler
 - `POST /payments/mock-success/:envelopeId` - Mock payment (dev only)
+
+**Donations:**
+- `POST /donations/create` - Create donation (Mayar)
+- `GET /donations/stats` - Get donation statistics
 
 See `API_DOCUMENTATION.md` for detailed documentation.
 
@@ -229,26 +234,119 @@ npm run db:push
 
 ## 🔧 Troubleshooting
 
-### Database Connection Error
-- Check `DATABASE_URL` in `.env`
-- Ensure PostgreSQL is running
-- Verify database exists
+### Common Issues
 
-### OpenAI API Error
-- Check `OPENAI_API_KEY` in `.env`
-- System will fallback to rule-based allocation if key is invalid
+#### 1. Database Connection Error
+**Error**: `Can't reach database server at localhost:5432`
 
-### Payment Gateway Error
-- **Xendit**: Check `XENDIT_API_KEY` in `.env`
-  - System will use mock mode if key is not set
-  - Verify API key has disbursement permission
-- **Mayar**: Check `MAYAR_API_KEY` in `.env`
-  - Used only for support developer feature
-  - Not required for main THR functionality
+**Solution**:
+```bash
+# Check if PostgreSQL is running
+# Windows: Get-Service postgresql*
+# Linux/Mac: sudo systemctl status postgresql
+
+# Verify DATABASE_URL in .env
+# Test connection
+npm run db:studio
+```
+
+#### 2. Budget Allocation Mismatch
+**Error**: `Total alokasi harus sama dengan total budget`
+
+**Solution**:
+- Use AI allocation endpoint first: `POST /api/ai/allocate`
+- Ensure sum of all `allocatedAmount` equals `totalBudget`
+- Use validation endpoint: `POST /api/envelopes/validate-allocation`
+
+#### 3. OpenAI API Error
+**Error**: `OPENAI_API_KEY not set - AI features will use fallback mode`
+
+**Solution**:
+```env
+# Add to .env
+OPENAI_API_KEY=sk-your-actual-api-key-here
+```
+**Note**: System automatically falls back to rule-based allocation if OpenAI fails.
+
+#### 4. Payment Gateway Error
+**Error**: `XENDIT_API_KEY not configured, using mock payment mode`
+
+**Solution**:
+- **Development**: This is normal, use mock mode
+- **Production**: Add credentials to .env:
+```env
+XENDIT_API_KEY=your-xendit-api-key
+XENDIT_WEBHOOK_SECRET=your-webhook-secret
+MAYAR_API_KEY=your-mayar-api-key
+```
+
+#### 5. Claim Token Not Found
+**Error**: `Claim not found or expired`
+
+**Solution**:
+- Verify envelope was created successfully
+- Check token from database: `npm run db:studio`
+- Use test tokens from seed: `npm run db:seed`
+
+#### 6. Port Already in Use
+**Error**: `EADDRINUSE: address already in use :::5000`
+
+**Solution**:
+```bash
+# Windows
+netstat -ano | findstr :5000
+taskkill /PID <PID> /F
+
+# Linux/Mac
+lsof -ti:5000 | xargs kill -9
+
+# Or change port in .env
+PORT=5001
+```
+
+#### 7. Prisma Client Not Generated
+**Error**: `Cannot find module '@prisma/client'`
+
+**Solution**:
+```bash
+npm run db:generate
+```
+
+### Debug Mode
+
+Enable detailed logging:
+```env
+LOG_LEVEL=debug
+NODE_ENV=development
+```
+
+Check logs:
+```bash
+# Error logs
+cat logs/error.log
+
+# All logs
+cat logs/combined.log
+```
+
+### Quick Fixes
+
+**Reset Database:**
+```bash
+npm run db:push -- --force-reset
+npm run db:seed
+```
+
+**Clean Install:**
+```bash
+rm -rf node_modules
+npm install
+npm run db:generate
+```
 
 ---
 
-## 📝 Features
+## 📚 Documentation
 
 ### ✅ Implemented
 - AI-powered allocation recommendation
@@ -276,27 +374,36 @@ npm run db:push
 
 ## 📚 Documentation
 
-- `API_DOCUMENTATION.md` - Complete API documentation
-- `postman_collection.json` - Postman collection for testing
-- `prisma/schema.prisma` - Database schema documentation
+- **API_DOCUMENTATION.md** - Complete API reference with examples
+- **SECURITY.md** - Security guidelines and best practices
+- **SECURITY_AUDIT.md** - Security audit results
+- **postman_collection.json** - Postman collection for testing
+- **prisma/schema.prisma** - Database schema documentation
+
+For frontend documentation, see `../frontend/README.md`
 
 ---
 
-## 🤝 Contributing
+## 📝 Features
 
-1. Create feature branch
-2. Make changes
-3. Test thoroughly
-4. Create pull request
+### ✅ Implemented
+- AI-powered allocation recommendation
+- AI-generated personal greetings
+- Envelope creation and management
+- Claim system with token validation
+- QR code validation for cash mode
+- **Hybrid payment gateway integration**:
+  - Xendit for THR payment collection & disbursement
+  - Mayar for support developer feature
+- Automatic disbursement to recipients
+- Mock mode for development
+- Structured logging
+- Error handling with error codes
+- Environment validation
+- Complete API documentation
 
----
-
-## 📄 License
-
-Private - BagiBerkah Project
-
----
-
-## 📞 Support
-
-For issues or questions, please create an issue in the repository.
+### 🔄 Fallback Modes
+- **AI Service**: Falls back to rule-based allocation if OpenAI API fails
+- **Payment (Xendit)**: Uses mock mode if API key not configured
+- **Disbursement (Xendit)**: Uses mock mode if API key not configured
+- **Donation (Mayar)**: Optional feature, not required for core functionality
