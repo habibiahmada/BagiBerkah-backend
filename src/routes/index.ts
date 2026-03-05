@@ -5,6 +5,7 @@ import aiRoutes from './ai.routes';
 import claimRoutes from './claim.routes';
 import paymentRoutes from './payment.routes';
 import donationRoutes from './donation.routes';
+import analyticsRoutes from './analytics.routes';
 
 const router: ExpressRouter = Router();
 
@@ -14,6 +15,7 @@ router.use('/ai', aiRoutes);
 router.use('/claims', claimRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/donations', donationRoutes);
+router.use('/analytics', analyticsRoutes);
 
 // API Info
 router.get('/', (req: Request, res: Response) => {
@@ -27,6 +29,7 @@ router.get('/', (req: Request, res: Response) => {
       claims: '/api/claims',
       payments: '/api/payments',
       donations: '/api/donations',
+      analytics: '/api/analytics',
     },
   });
 });
