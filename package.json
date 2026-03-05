@@ -5,6 +5,9 @@
   "license": "ISC",
   "author": "habibiahmada",
   "main": "dist/index.js",
+  "prisma": {
+    "seed": "tsx src/prisma/seed.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

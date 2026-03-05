@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import { getQuizTemplate } from '../data/quiz-templates';
 
 const prisma = new PrismaClient();
 
@@ -16,8 +17,14 @@ async function main() {
 
   // Create sample envelope with recipients
   console.log('📧 Creating sample envelope...');
+  
+  // Load quiz template for quiz recipient
+  const quizTemplate = getQuizTemplate('pengetahuan-umum-mudah');
+  
   const envelope = await prisma.envelope.create({
     data: {
+      envelopeName: 'THR Demo 2026',
+      accessCode: 'DEMO2026',
       totalBudget: 500000,
       distributionMode: 'CASH',
       status: 'ACTIVE',
@@ -31,6 +38,8 @@ async function main() {
             allocatedAmount: 150000,
             aiReasoning: 'Anak-anak yang masih sekolah dan sangat dekat mendapat porsi lebih besar',
             aiGreeting: 'Selamat Idul Fitri adik kecil! Semoga makin rajin belajar dan puasanya lancar ya!',
+            playableType: 'GAME',
+            gameType: 'MEMORY_CARD',
           },
           {
             name: 'Sepupu Remaja',
@@ -40,6 +49,10 @@ async function main() {
             allocatedAmount: 200000,
             aiReasoning: 'Remaja yang kuliah membutuhkan biaya lebih untuk kebutuhan pendidikan',
             aiGreeting: 'Selamat Idul Fitri! Semoga kuliahnya lancar dan sukses selalu. Tetap semangat!',
+            playableType: 'QUIZ',
+            quizTopic: 'pengetahuan-umum-mudah',
+            quizDifficulty: 'EASY',
+            quizQuestions: quizTemplate?.questions as any,
           },
           {
             name: 'Keponakan Dewasa',
@@ -49,6 +62,7 @@ async function main() {
             allocatedAmount: 150000,
             aiReasoning: 'Dewasa yang sudah bekerja mendapat porsi standar',
             aiGreeting: 'Selamat Idul Fitri. Mohon maaf lahir batin. Semoga pekerjaan dan keluarga selalu diberkahi.',
+            playableType: 'DIRECT',
           },
         ],
       },
