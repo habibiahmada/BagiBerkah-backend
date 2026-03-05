@@ -125,6 +125,7 @@ export class DonationService {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
+        validationErrors: error.response?.data?.data, // Mayar validation errors
         baseUrl: this.mayarBaseUrl,
         hasApiKey: !!this.mayarApiKey,
         apiKeyLength: this.mayarApiKey?.length || 0,
@@ -132,6 +133,11 @@ export class DonationService {
       };
 
       console.error('❌ Mayar Donation Error:', errorDetails);
+      
+      // Log validation errors in detail if available
+      if (errorDetails.validationErrors) {
+        console.error('📋 Validation Errors Detail:', JSON.stringify(errorDetails.validationErrors, null, 2));
+      }
       
       // In production, throw error instead of fallback
       if (process.env.NODE_ENV === 'production') {
