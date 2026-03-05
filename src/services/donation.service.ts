@@ -63,6 +63,7 @@ export class DonationService {
         items: [
           {
             name: 'Donasi BagiBerkah',
+            description: data.message || 'Dukungan untuk pengembangan aplikasi BagiBerkah',
             quantity: 1,
             rate: data.amount,
           }
