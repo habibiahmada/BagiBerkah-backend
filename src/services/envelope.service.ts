@@ -122,7 +122,21 @@ export class EnvelopeService {
       },
     });
 
-    return envelope;
+    if (!envelope) {
+      return null;
+    }
+
+    // Ensure playable data is included
+    return {
+      ...envelope,
+      recipients: envelope.recipients.map(r => ({
+        ...r,
+        playableType: r.playableType || 'DIRECT',
+        gameType: r.gameType,
+        quizTopic: r.quizTopic,
+        quizDifficulty: r.quizDifficulty,
+      })),
+    };
   }
 
   async getStatus(id: string) {
