@@ -89,23 +89,31 @@ export class DonationService {
 
       console.log('✅ Mayar response:', {
         status: response.status,
-        data: response.data,
+        statusCode: response.data.statusCode,
+        messages: response.data.messages,
+        hasData: !!response.data.data,
       });
 
       // Extract payment URL and ID from Mayar invoice response
-      // Response structure: { statusCode, messages, data: { id, link, transactionId, expiredAt } }
-      const responseData = response.data.data || response.data;
-      const paymentUrl = responseData.link || responseData.url || response.data.url || response.data.invoiceUrl;
-      const paymentId = responseData.id || responseData.transactionId || response.data.id || productId;
+      // Response structure: { statusCode: 200, messages: 'success', data: { id, link, transactionId, expiredAt } }
+      if (!response.data.data) {
+        console.error('❌ No data object in response. Full response:', JSON.stringify(response.data, null, 2));
+        throw new Error('Invalid Mayar response structure');
+      }
+
+      const mayarData = response.data.data;
+      const paymentUrl = mayarData.link;
+      const paymentId = mayarData.id || mayarData.transactionId || productId;
 
       if (!paymentUrl) {
-        console.error('❌ Payment URL not found. Full response:', JSON.stringify(response.data, null, 2));
+        console.error('❌ Payment URL not found. Mayar data:', JSON.stringify(mayarData, null, 2));
         throw new Error('Payment URL not found in Mayar response');
       }
 
       console.log('✅ Payment link created:', {
         paymentId,
         paymentUrl,
+        transactionId: mayarData.transactionId,
       });
 
       // Save donation record
