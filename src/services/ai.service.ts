@@ -52,8 +52,17 @@ Always respond in JSON format with allocations array containing recipientIndex, 
     } catch (error: any) {
       console.error('AI Allocation Error:', error);
       
-      // Fallback to rule-based allocation if AI fails
-      console.log('Falling back to rule-based allocation');
+      // Check if it's a quota/rate limit error
+      if (error.status === 429 || error.code === 'insufficient_quota') {
+        console.log('⚠️ OpenAI quota exceeded - Using rule-based allocation');
+      } else if (error.status === 401) {
+        console.error('❌ OpenAI API key invalid');
+      } else {
+        console.error('❌ OpenAI API error:', error.message);
+      }
+      
+      // Fallback to rule-based allocation
+      console.log('✅ Falling back to rule-based allocation');
       return this.ruleBasedAllocation(totalBudget, recipients);
     }
   }
@@ -103,6 +112,11 @@ Respond in JSON format with: { "greeting": "message here", "tone": "warm/cheerfu
       return JSON.parse(response);
     } catch (error: any) {
       console.error('AI Greeting Error:', error);
+      
+      // Check error type
+      if (error.status === 429 || error.code === 'insufficient_quota') {
+        console.log('⚠️ OpenAI quota exceeded - Using template greeting');
+      }
       
       // Fallback to template-based greeting
       return this.templateGreeting(recipientName, ageLevel, amount);
@@ -203,7 +217,7 @@ Respond in JSON format:
       return {
         recipientIndex: index,
         amount,
-        reasoning: `Allocated based on age, status, and relationship closeness (score: ${score.toFixed(1)})`,
+        reasoning: `Alokasi berdasarkan usia, status, dan kedekatan (skor: ${score.toFixed(1)})`,
       };
     });
 
@@ -214,6 +228,8 @@ Respond in JSON format:
     return {
       allocations,
       totalAllocated: totalBudget,
+      usedFallback: true, // Indicate fallback was used
+      fallbackReason: 'AI service unavailable',
     };
   }
 
