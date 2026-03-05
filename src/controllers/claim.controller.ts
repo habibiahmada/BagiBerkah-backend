@@ -12,7 +12,7 @@ export class ClaimController {
   getByToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { token } = req.params;
-      const claim = await this.service.getByToken(token);
+      const claim = await this.service.getByToken(String(token));
       
       if (!claim) {
         throw new AppError('Claim not found or expired', 404);
@@ -30,7 +30,7 @@ export class ClaimController {
   submit = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { token } = req.params;
-      const claim = await this.service.submit(token, req.body);
+      const claim = await this.service.submit(String(token), req.body);
       
       res.json({
         success: true,

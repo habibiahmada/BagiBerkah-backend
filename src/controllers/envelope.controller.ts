@@ -62,7 +62,7 @@ export class EnvelopeController {
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const envelope = await this.service.getById(id);
+      const envelope = await this.service.getById(String(id));
       
       if (!envelope) {
         throw new AppError('Envelope not found', 404);
@@ -80,7 +80,7 @@ export class EnvelopeController {
   getStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const status = await this.service.getStatus(id);
+      const status = await this.service.getStatus(String(id));
       
       if (!status) {
         throw new AppError('Envelope not found', 404);
@@ -111,7 +111,7 @@ export class EnvelopeController {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const envelope = await this.service.update(id, req.body);
+      const envelope = await this.service.update(String(id), req.body);
       
       res.json({
         success: true,

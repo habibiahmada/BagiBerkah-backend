@@ -26,7 +26,7 @@ export class PaymentController {
   getStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { paymentId } = req.params;
-      const status = await this.service.getStatus(paymentId);
+      const status = await this.service.getStatus(String(paymentId));
       
       if (!status) {
         throw new AppError('Payment not found', 404);
@@ -58,7 +58,7 @@ export class PaymentController {
   mockPaymentSuccess = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { envelopeId } = req.params;
-      await this.service.simulatePaymentSuccess(envelopeId);
+      await this.service.simulatePaymentSuccess(String(envelopeId));
       
       res.json({
         success: true,
