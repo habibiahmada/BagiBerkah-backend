@@ -77,6 +77,9 @@ export class ClaimService {
       amount: claim.recipient.allocatedAmount,
       greeting: claim.recipient.aiGreeting || 'Selamat Idul Fitri! Mohon maaf lahir batin.',
       status: claim.status,
+      claimMethod: claim.claimMethod,
+      bankAccount: claim.bankAccount,
+      bankName: claim.bankName,
       qrToken: claim.qrToken,
       expiresAt: claim.expiresAt,
       distributionMode: claim.recipient.envelope.distributionMode,
@@ -128,13 +131,14 @@ export class ClaimService {
     });
 
     // For digital mode, initiate transfer
-    if (data.claimMethod === 'digital' && data.bankAccount && data.bankName) {
+    if (data.claimMethod === 'digital' && data.bankAccount && data.bankName && data.accountHolderName) {
       try {
         const disbursement = await this.disbursementService.processTransfer(
           updatedClaim.id,
           data.bankAccount,
           data.bankName,
-          updatedClaim.recipient.allocatedAmount
+          updatedClaim.recipient.allocatedAmount,
+          data.accountHolderName
         );
 
         console.log('✅ Digital transfer initiated:', disbursement);

@@ -50,11 +50,27 @@ Required:
 
 Optional (will use mock/fallback if not set):
 - `OPENAI_API_KEY` - OpenAI API key for AI features
-- `MAYAR_API_KEY` - Mayar payment gateway API key
+- `XENDIT_API_KEY` - Xendit API key for THR payment & disbursement
+- `XENDIT_WEBHOOK_SECRET` - Xendit webhook secret for verification
+- `MAYAR_API_KEY` - Mayar API key for support developer feature
 - `MAYAR_WEBHOOK_SECRET` - Mayar webhook secret
 - `FRONTEND_URL` - Frontend URL for CORS (default: http://localhost:3000)
 
 See `.env.example` for all available variables.
+
+### Payment Gateway Configuration
+
+**Xendit (THR System)**:
+- Used for main THR payment collection and disbursement
+- Requires `XENDIT_API_KEY` for production
+- Sandbox mode available for testing
+- Base URL: `https://api.xendit.co` (production) or `https://api.xendit.co` (sandbox uses same URL with test keys)
+
+**Mayar (Support Developer)**:
+- Used for donation and support developer features
+- Requires `MAYAR_API_KEY` for production
+- Sandbox: `https://api.mayar.club/hl/v1`
+- Production: `https://api.mayar.id`
 
 ---
 
@@ -223,8 +239,12 @@ npm run db:push
 - System will fallback to rule-based allocation if key is invalid
 
 ### Payment Gateway Error
-- Check `MAYAR_API_KEY` in `.env`
-- System will use mock mode if key is not set
+- **Xendit**: Check `XENDIT_API_KEY` in `.env`
+  - System will use mock mode if key is not set
+  - Verify API key has disbursement permission
+- **Mayar**: Check `MAYAR_API_KEY` in `.env`
+  - Used only for support developer feature
+  - Not required for main THR functionality
 
 ---
 
@@ -236,8 +256,10 @@ npm run db:push
 - Envelope creation and management
 - Claim system with token validation
 - QR code validation for cash mode
-- Payment gateway integration (Mayar)
-- Digital transfer/disbursement
+- **Hybrid payment gateway integration**:
+  - Xendit for THR payment collection & disbursement
+  - Mayar for support developer feature
+- Automatic disbursement to recipients
 - Mock mode for development
 - Structured logging
 - Error handling with error codes
@@ -246,8 +268,9 @@ npm run db:push
 
 ### 🔄 Fallback Modes
 - **AI Service**: Falls back to rule-based allocation if OpenAI API fails
-- **Payment**: Uses mock mode if Mayar API key not configured
-- **Disbursement**: Uses mock mode if Mayar API key not configured
+- **Payment (Xendit)**: Uses mock mode if API key not configured
+- **Disbursement (Xendit)**: Uses mock mode if API key not configured
+- **Donation (Mayar)**: Optional feature, not required for core functionality
 
 ---
 

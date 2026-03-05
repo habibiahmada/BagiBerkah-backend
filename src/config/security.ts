@@ -65,7 +65,7 @@ export const helmetConfig = helmet({
 export const corsConfig = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
+      process.env.FRONTEND_URL,
       'http://localhost:3000',
       'http://localhost:3001',
     ];
@@ -104,6 +104,20 @@ export const MAYAR_WEBHOOK_IPS = [
   '::1', // localhost IPv6
   // Add actual Mayar IPs here when available
   // '103.xxx.xxx.xxx',
+];
+
+/**
+ * Xendit webhook allowed IPs
+ * Update with actual Xendit IPs in production
+ * Reference: https://developers.xendit.co/api-reference/#webhook-security
+ */
+export const XENDIT_WEBHOOK_IPS = [
+  '127.0.0.1', // localhost for testing
+  '::1', // localhost IPv6
+  // Add actual Xendit IPs here when available
+  // Xendit typically uses these IP ranges:
+  // '52.77.xxx.xxx',
+  // '54.xxx.xxx.xxx',
 ];
 
 /**

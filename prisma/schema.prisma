@@ -172,3 +172,20 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
 }
+
+model Donation {
+  id               String        @id @default(cuid())
+  paymentId        String        @unique
+  amount           Int
+  donorName        String        @default("Anonymous")
+  message          String?
+  status           PaymentStatus @default(PENDING)
+  paymentUrl       String?
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  paidAt           DateTime?
+  
+  @@index([status])
+  @@index([createdAt])
+}
