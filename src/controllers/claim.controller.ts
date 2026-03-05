@@ -54,4 +54,25 @@ export class ClaimController {
       next(error);
     }
   };
+
+  completeGame = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token } = req.params;
+      const result = await this.service.completeGame(String(token));
+      
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

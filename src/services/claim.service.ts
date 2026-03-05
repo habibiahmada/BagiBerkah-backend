@@ -78,6 +78,11 @@ export class ClaimService {
       greeting: claim.recipient.aiGreeting || 'Selamat Idul Fitri! Mohon maaf lahir batin.',
       status: claim.status,
       claimMethod: claim.claimMethod,
+      // Playable data
+      playableType: claim.recipient.playableType,
+      gameType: claim.recipient.gameType,
+      quizQuestions: claim.recipient.quizQuestions,
+      gameCompleted: claim.gameCompleted,
       bankAccount: claim.bankAccount,
       bankName: claim.bankName,
       qrToken: claim.qrToken,
@@ -230,6 +235,33 @@ export class ClaimService {
       amount: validated.recipient.allocatedAmount,
       claimId: validated.id,
       message: 'QR code validated successfully. You can now give the cash.',
+    };
+  }
+
+  /**
+   * Mark game as completed
+   */
+  async completeGame(token: string) {
+    const claim = await prisma.claim.findUnique({
+      where: { token },
+    });
+
+    if (!claim) {
+      throw new AppError('Claim not found', 404);
+    }
+
+    await prisma.claim.update({
+      where: { id: claim.id },
+      data: {
+        gameCompleted: true,
+        gameCompletedAt: new Date(),
+        gameAttempts: claim.gameAttempts + 1,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Game completed successfully',
     };
   }
 

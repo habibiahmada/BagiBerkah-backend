@@ -20,4 +20,7 @@ router.get('/:token', controller.getByToken);
 // Submit claim
 router.post('/:token', validate(submitClaimSchema), controller.submit);
 
+// Complete game/quiz
+router.post('/:token/complete-game', controller.completeGame);
+
 export default router;
