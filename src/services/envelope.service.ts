@@ -87,8 +87,24 @@ export class EnvelopeService {
       await this.claimService.createClaim(recipient.id);
     }
 
+    // Fetch envelope with claims included
+    const envelopeWithClaims = await prisma.envelope.findUnique({
+      where: { id: envelope.id },
+      include: {
+        recipients: {
+          include: {
+            claim: true,
+          },
+        },
+      },
+    });
+
+    if (!envelopeWithClaims) {
+      throw new AppError('Failed to fetch envelope with claims', 500);
+    }
+
     return {
-      ...envelope,
+      ...envelopeWithClaims,
       accessCode, // Return access code to show to user
     };
   }

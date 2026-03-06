@@ -145,8 +145,6 @@ export class ClaimService {
           updatedClaim.recipient.allocatedAmount,
           data.accountHolderName
         );
-
-        console.log('✅ Digital transfer initiated:', disbursement);
       } catch (error: any) {
         console.error('❌ Disbursement error:', error.message);
         // Don't fail the claim if disbursement fails
